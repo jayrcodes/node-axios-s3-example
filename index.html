@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <section class="flex items-center justify-center h-screen">
+            <div class="flex flex-col space-y-4">
+                <p>Upload AWS Demo</p>
+                <input type="file" class="file-input w-full max-w-xs" @change="fileChange" />
+                <div v-if="uploading" class="flex justify-center">
+                    <span class="loading loading-spinner text-primary"></span>
+                </div>
+                <button class="btn btn-primary" @click="upload" :disabled="uploading">Upload</button>
+                <div role="alert" class="alert alert-warning" v-if="error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>{{ error }}</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue
+
+        const api = axios.create({
+            baseURL: 'http://localhost:3000',
+        })
+
+        createApp({
+            setup() {
+                const uploading = ref(false)
+                const formData = ref(null)
+                const error = ref()
+
+                function fileChange(event) {
+                    const file = event.target.files[0]
+                    const data = new FormData()
+                    data.append('upload', file)
+                    formData.value = data
+                }
+
+                function clear() {
+                    uploading.value = false
+                    error.value = null
+                }
+
+                async function upload() {
+                    try {
+                        clear()
+                        await api.post('/upload', formData.value, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data',
+                            },
+                        },)
+                    } catch (err) {
+                        error.value = err?.response?.data?.message || err.message
+                    } finally {
+                        uploading.value = false
+                        formData.value = null
+                    }
+                }
+
+                return {
+                    upload,
+                    uploading,
+                    fileChange,
+                    error,
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+
+</html>
