@@ -17,17 +17,22 @@
             <div class="flex flex-col space-y-4">
                 <p>Upload AWS Demo</p>
                 <input type="file" class="file-input w-full max-w-xs" @change="fileChange" />
-                <div v-if="uploading" class="flex justify-center">
-                    <span class="loading loading-spinner text-primary"></span>
+                <div v-if="progress !== 0" class="flex justify-center">
+                    <!-- <span class="loading loading-spinner text-primary"></span> -->
+                    <div class="radial-progress bg-primary text-primary-content border-4 border-primary"
+                        :style="{
+                            '--value': progress
+                        }"
+                        role="progressbar">{{ progress }}%</div>
                 </div>
                 <button class="btn btn-primary" @click="upload" :disabled="uploading">Upload</button>
-                <div role="alert" class="alert alert-warning" v-if="error">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>{{ error }}</span>
+                <div class="toast toast-top toast-center" v-if="success ?? error">
+                    <div class="alert" :class="{
+                        'alert-warning': error,
+                        'alert-success': success
+                    }">
+                        <span>{{ success ?? error }}</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -44,7 +49,9 @@
             setup() {
                 const uploading = ref(false)
                 const formData = ref(null)
-                const error = ref()
+                const error = ref(null)
+                const success = ref(null)
+                const progress = ref(0)
 
                 function fileChange(event) {
                     const file = event.target.files[0]
@@ -53,19 +60,22 @@
                     formData.value = data
                 }
 
-                function clear() {
-                    uploading.value = false
-                    error.value = null
-                }
-
                 async function upload() {
                     try {
-                        clear()
-                        await api.post('/upload', formData.value, {
+                        success.value = null
+                        error.value = null
+                        uploading.value = true
+                        progress.value = 0
+
+                        const response = await api.post('/upload', formData.value, {
                             headers: {
                                 'Content-Type': 'multipart/form-data',
                             },
-                        },)
+                            onUploadProgress: (progressEvent) => {
+                                progress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+                            },
+                        })
+                        success.value = response.data.message
                     } catch (err) {
                         error.value = err?.response?.data?.message || err.message
                     } finally {
@@ -79,6 +89,8 @@
                     uploading,
                     fileChange,
                     error,
+                    success,
+                    progress,
                 }
             }
         }).mount('#app')

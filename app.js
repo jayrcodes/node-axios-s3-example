@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors')
 const app = express();
-const { upload } = require('./storage');
+const Storage = require('./storage');
 
 require('dotenv').config();
 app.use(cors())
+
+const storage = new Storage();
+storage.folder = 'uploads';
 
 app.get('/', (req, res) => {
   return res.json({
@@ -13,7 +16,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/upload', function (req, res, next) {
-  upload(req, res, function (error) {
+  storage.upload(req, res, function (error) {
     if (error) {
       console.log(error);
       res.status(422);
